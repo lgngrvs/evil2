@@ -1,2 +1,3 @@
 # ignore all autoencoder files
 ae*
+__pycache__/*
