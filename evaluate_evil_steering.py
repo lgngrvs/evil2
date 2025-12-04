@@ -118,6 +118,11 @@ class SteeringEvaluator:
                                    scale: float,
                                    max_new_tokens: int) -> pd.DataFrame:
         """Generate responses with steering applied."""
+        # clear any hooks
+        if hasattr(self.model.model.layers[steer_layer], '_forward_hooks'):
+            self.model.model.layers[steer_layer]._forward_hooks.clear()
+            print("Extra hook cleared.")
+            
         steer_vector = self.evil_vectors[steer_layer] * scale
         data = []
         
@@ -142,16 +147,21 @@ class SteeringEvaluator:
             
             handle = self.model.model.layers[steer_layer].register_forward_hook(steering_hook)
             
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    do_sample=True,
-                    temperature=1.0,
-                    pad_token_id=self.tokenizer.eos_token_id
-                )
-            
-            handle.remove()
+            try:
+                with torch.no_grad():
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_new_tokens=max_new_tokens,
+                        do_sample=True,
+                        temperature=1.0,
+                        pad_token_id=self.tokenizer.eos_token_id,
+                        past_key_values=None  # ensure no cache carryover
+                    )
+            finally:
+                handle.remove()  # always remove hook even if generation fails
+                # clear any cached state
+                if hasattr(self.model, 'past_key_values'):
+                    self.model.past_key_values = None
             
             response = self.tokenizer.decode(
                 outputs[0][input_length:],

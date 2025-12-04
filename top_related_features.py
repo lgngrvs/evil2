@@ -2,7 +2,7 @@ import torch
 from typing import List, Tuple, Dict, Callable
 from torch import Tensor
 from transformers import AutoModelForCausalLM, AutoTokenizer
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 
 def random_steering_vector(model_interface: AutoModelForCausalLM, device: str = 'cuda') -> Tensor:
     """Generate a random unit-norm steering vector matching model's hidden dim"""
